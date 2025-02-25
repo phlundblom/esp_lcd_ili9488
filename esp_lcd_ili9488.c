@@ -123,19 +123,14 @@ static esp_err_t panel_ili9488_init(esp_lcd_panel_t *panel) {
       {ILI9488_POWER_CTL_ONE, {0x17, 0x15}, 2},
       {ILI9488_POWER_CTL_TWO, {0x41}, 1},
       {ILI9488_POWER_CTL_THREE, {0x00, 0x12, 0x80}, 3},
-      {LCD_CMD_MADCTL, {ili9488->memory_access_control}, 1}, // XXX 0x48 in espi
-      {LCD_CMD_COLMOD,
-       {ili9488->color_mode},
-       1}, // 0x3a , verkar skriva 0x55 (16 bit) fast det är 0x66 (18bit) i espi
+      {LCD_CMD_MADCTL, {ili9488->memory_access_control}, 1},
+      {LCD_CMD_COLMOD, {ili9488->color_mode}, 1},
       {ILI9488_INTRFC_MODE_CTL, {ILI9488_INTERFACE_MODE_USE_SDO}, 1},
       {ILI9488_FRAME_RATE_NORMAL_CTL, {ILI9488_FRAME_RATE_60HZ}, 1},
       {ILI9488_INVERSION_CTL, {0x02}, 1},
       {ILI9488_FUNCTION_CTL, {0x02, 0x02, 0x3B}, 3},
       {ILI9488_ENTRY_MODE_CTL, {0xC6}, 1},
-      {ILI9488_ADJUST_CTL_THREE,
-       {0xA9, 0x51, 0x2C, 0x02},
-       /*{0xA9, 0x51, 0x2C, 0x82},*/
-       4}, // ...2c 82 i espi
+      {ILI9488_ADJUST_CTL_THREE, {0xA9, 0x51, 0x2C, 0x02}, 4},
       {LCD_CMD_NOP, {0}, ILI9488_INIT_DONE_FLAG},
   };
 
@@ -174,33 +169,6 @@ static esp_err_t panel_ili9488_init(esp_lcd_panel_t *panel) {
   return ESP_OK;
 }
 
-#if 0
-#define SEND_COORDS(start, end, io, cmd)                                       \
-  esp_lcd_panel_io_tx_param(io, cmd,                                           \
-                            (uint8_t[]){                                       \
-                                (start >> 8) & 0xFF,                           \
-                                start & 0xFF,                                  \
-                                ((end - 1) >> 8) & 0xFF,                       \
-                                (end - 1) & 0xFF,                              \
-                            },                                                 \
-                            4)
-#endif
-#if 0 // funkar med 32bit param
-#define SEND_COORDS(start, end, io, cmd)                                       \
-  esp_lcd_panel_io_tx_param(io, cmd,                                           \
-                            (uint8_t[]){                                       \
-                                start & 0xFF,                                  \
-                                0,                                             \
-                                (start >> 8) & 0xFF,                           \
-                                0,                                             \
-                                (end - 1) & 0xFF,                              \
-                                0,                                             \
-                                ((end - 1) >> 8) & 0xFF,                       \
-                                0,                                             \
-                            },                                                 \
-                            8)
-#endif
-#if 0 // funkar med 16-bit param
 #define SEND_COORDS(start, end, io, cmd)                                       \
   esp_lcd_panel_io_tx_param(io, cmd,                                           \
                             (uint8_t[]){                                       \
@@ -214,30 +182,6 @@ static esp_err_t panel_ili9488_init(esp_lcd_panel_t *panel) {
                                 0,                                             \
                             },                                                 \
                             8)
-#endif
-#if 1
-#define SEND_COORDS(start, end, io, cmd)                                       \
-  esp_lcd_panel_io_tx_param(io, cmd,                                           \
-                            (uint8_t[]){                                       \
-                                (start >> 8) & 0xFF,                           \
-                                0,                                             \
-                                start & 0xFF,                                  \
-                                0,                                             \
-                                ((end - 1) >> 8) & 0xFF,                       \
-                                0,                                             \
-                                (end - 1) & 0xFF,                              \
-                                0,                                             \
-                            },                                                 \
-                            8)
-#endif
-
-// 32-bit: 0xaabb 0xccdd => 0x00aa 0x00bb 0x00cc 0x00dd, kastas om i 32-bit =>
-// 0xbb00 0xaa00 0xdd00 0xcc00 på bussen
-// vänder vi baklänges 16-bit (kastas om 16-bit) 0xbb00 0xaa00 0xdd00 0xcc00 =>
-// 0x00bb 0x00aa 0x00dd 0x00cc
-//                       XXX TODO Try to flip big/littel endian
-//   #define tft_Write_32C(C,D)  TFT_WRITE_BITS((C)<<24 | (C), 32);
-// TFT_WRITE_BITS((D)<<24 | (D), 32)
 
 static esp_err_t panel_ili9488_draw_bitmap(esp_lcd_panel_t *panel, int x_start,
                                            int y_start, int x_end, int y_end,
@@ -396,7 +340,6 @@ esp_lcd_new_panel_ili9488(const esp_lcd_panel_io_handle_t io,
         (uint8_t *)heap_caps_malloc(buffer_size * 3, MALLOC_CAP_DMA);
     ESP_GOTO_ON_FALSE(ili9488->color_buffer, ESP_ERR_NO_MEM, err, TAG,
                       "Failed to allocate DMA color conversion buffer");
-    ESP_LOGI(TAG, "buf is %p", ili9488->color_buffer);
   }
 
   ili9488->memory_access_control = LCD_CMD_MX_BIT | LCD_CMD_BGR_BIT;
@@ -413,7 +356,6 @@ esp_lcd_new_panel_ili9488(const esp_lcd_panel_io_handle_t io,
                       "Unsupported color mode!");
   }
 
-  ESP_LOGI(TAG, "Color mode 0x%x", ili9488->color_mode);
   ili9488->io = io;
   ili9488->reset_gpio_num = panel_dev_config->reset_gpio_num;
   ili9488->reset_level = panel_dev_config->flags.reset_active_high;
