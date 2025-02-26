@@ -30,7 +30,7 @@
 
 // Uncomment the following line to enable using double buffering of LVGL color
 // data.
-// #define USE_DOUBLE_BUFFERING 1
+#define USE_DOUBLE_BUFFERING 1
 
 // Funkar med 20MHz
 // SPI2 MOSI 11 = 19
@@ -52,16 +52,14 @@ static const char *TAG = "main";
 
 static const int DISPLAY_HORIZONTAL_PIXELS = 480;
 static const int DISPLAY_VERTICAL_PIXELS = 320;
-// static const int DISPLAY_COMMAND_BITS = 8;
 static const int DISPLAY_COMMAND_BITS = 16;
-// static const int DISPLAY_PARAMETER_BITS = 32;
 static const int DISPLAY_PARAMETER_BITS = 16;
 static const unsigned int DISPLAY_REFRESH_HZ = 20e6;
 static const int DISPLAY_SPI_QUEUE_LEN = 10;
 static const int SPI_MAX_TRANSFER_SIZE = 32768;
 
 // Default to 25 lines of color data
-static const size_t LV_BUFFER_SIZE = DISPLAY_HORIZONTAL_PIXELS * 25;
+static const size_t LV_BUFFER_SIZE = DISPLAY_HORIZONTAL_PIXELS * 32;
 static const int LVGL_UPDATE_PERIOD_MS = 5;
 
 static const ledc_mode_t BACKLIGHT_LEDC_MODE = LEDC_LOW_SPEED_MODE;
@@ -204,8 +202,8 @@ void initialize_display() {
   ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)SPI2_HOST,
                                            &io_config, &lcd_io_handle));
 
-  ESP_ERROR_CHECK(esp_lcd_new_panel_ili9488(lcd_io_handle, &lcd_config,
-                                            LV_BUFFER_SIZE, &lcd_handle));
+  ESP_ERROR_CHECK(
+      esp_lcd_new_panel_ili9488(lcd_io_handle, &lcd_config, &lcd_handle));
 
   ESP_ERROR_CHECK(esp_lcd_panel_reset(lcd_handle));
   ESP_ERROR_CHECK(esp_lcd_panel_init(lcd_handle));
@@ -277,8 +275,9 @@ void create_demo_ui() {
   // Add a scale first
   lv_scale_set_mode(meter, LV_SCALE_MODE_ROUND_OUTER);
   lv_obj_set_style_radius(meter, LV_RADIUS_CIRCLE, 0);
-  lv_scale_set_total_tick_count(meter, 100);
-  lv_scale_set_major_tick_every(meter, 10);
+  lv_scale_set_range(meter, 0, 100);
+  lv_scale_set_total_tick_count(meter, 50);
+  lv_scale_set_major_tick_every(meter, 5);
 
   lv_scale_section_t *section;
 
