@@ -164,18 +164,18 @@ static esp_err_t panel_ili9488_init(esp_lcd_panel_t *panel) {
   return ESP_OK;
 }
 
-#define SEND_COORDS(start, end, io, cmd)                                       \
-  esp_lcd_panel_io_tx_param(io, cmd,                                           \
-                            (uint8_t[]){                                       \
-                                (start >> 8) & 0xFF,                           \
-                                0,                                             \
-                                start & 0xFF,                                  \
-                                0,                                             \
-                                ((end - 1) >> 8) & 0xFF,                       \
-                                0,                                             \
-                                (end - 1) & 0xFF,                              \
-                                0,                                             \
-                            },                                                 \
+#define SEND_COORDS(start, end, io, cmd)                 \
+  esp_lcd_panel_io_tx_param(io, cmd,                     \
+                            (uint8_t[]){                 \
+                                (start >> 8) & 0xFF,     \
+                                0,                       \
+                                start & 0xFF,            \
+                                0,                       \
+                                ((end - 1) >> 8) & 0xFF, \
+                                0,                       \
+                                (end - 1) & 0xFF,        \
+                                0,                       \
+                            },                           \
                             8)
 
 static esp_err_t panel_ili9488_draw_bitmap(esp_lcd_panel_t *panel, int x_start,
@@ -197,14 +197,6 @@ static esp_err_t panel_ili9488_draw_bitmap(esp_lcd_panel_t *panel, int x_start,
   SEND_COORDS(y_start, y_end, io, LCD_CMD_RASET);
 
   if (ili9488->color_mode == ILI9488_COLOR_MODE_18BIT) {
-    uint8_t *buf = color_data;
-    uint8_t tmp = 0;
-    for (uint32_t i = 0; i < color_data_len * 3; i += 3) {
-      tmp = buf[i];
-      buf[i] = buf[i + 2];
-      buf[i + 2] = tmp;
-    }
-
     esp_lcd_panel_io_tx_color(io, LCD_CMD_RAMWR, color_data,
                               color_data_len * 3);
   } else {
