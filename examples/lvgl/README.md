@@ -2,6 +2,8 @@
 
 This is a very basic example using LVGL and an ILI9488 SPI display.
 
+For LVGL to work without color conversions in driver, LV_COLOR_DEPTH must be set to 24 in lv_conf.h.
+
 ## Default pin assignments
 
 For the ESP32 pins are as follows:

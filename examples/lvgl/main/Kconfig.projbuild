@@ -21,28 +21,28 @@ menu "Pin Configuration"
 
     menu "TFT Pins"
         config TFT_CS_PIN
-            int
+            int "CS pin"
             range -1 33 if IDF_TARGET_ESP32
             range -1 48 if IDF_TARGET_ESP32S3
             default 3 if IDF_TARGET_ESP32S3
             default 16
 
         config TFT_RESET_PIN
-            int
+            int "Reset pin"
             range -1 33 if IDF_TARGET_ESP32
             range -1 48 if IDF_TARGET_ESP32S3
             default 46 if IDF_TARGET_ESP32S3
             default -1
     
         config TFT_DC_PIN
-            int
+            int "DC pin"
             range -1 33 if IDF_TARGET_ESP32
             range -1 48 if IDF_TARGET_ESP32S3
             default 9 if IDF_TARGET_ESP32S3
             default 17
 
         config TFT_BACKLIGHT_PIN
-            int
+            int "Backlight pin"
             range -1 33 if IDF_TARGET_ESP32
             range -1 48 if IDF_TARGET_ESP32S3
             default 12 if IDF_TARGET_ESP32S3
