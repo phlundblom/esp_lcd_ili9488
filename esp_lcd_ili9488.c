@@ -40,6 +40,7 @@ typedef struct
     uint8_t color_mode;
     size_t buffer_size;
     uint8_t *color_buffer;
+    int cmd_param_bits;
 } ili9488_panel_t;
 
 enum ili9488_constants
@@ -151,23 +152,42 @@ static esp_err_t panel_ili9488_init(esp_lcd_panel_t *panel)
     {
         ESP_LOGD(TAG, "Sending CMD: %02x, len: %d", ili9488_init[cmd].cmd,
                  ili9488_init[cmd].data_bytes & ILI9488_INIT_LENGTH_MASK);
-    if (ili9488->color_mode == ILI9488_COLOR_MODE_18BIT) {
-        uint16_t fill_buf[20];
-        int param_len = ili9488_init[cmd].data_bytes & ILI9488_INIT_LENGTH_MASK;
+        if (ili9488->cmd_param_bits == 32)
+        {
+            uint32_t fill_buf[20];
+            int param_len = ili9488_init[cmd].data_bytes & ILI9488_INIT_LENGTH_MASK;
 
-        assert(param_len <= sizeof(fill_buf) / sizeof(fill_buf[0]) &&
-            "command fill buf smaller than command data");
+            assert(param_len <= sizeof(fill_buf) / sizeof(fill_buf[0]) &&
+                "command fill buf smaller than command data");
 
-        for (uint32_t i = 0; i < param_len; i++) {
-            fill_buf[i] = ili9488_init[cmd].data[i];
+            for (int i = 0; i < param_len; i++)
+            {
+                fill_buf[i] = ili9488_init[cmd].data[i];
+            }
+            esp_lcd_panel_io_tx_param(io, ili9488_init[cmd].cmd, fill_buf,
+                param_len * 4);
         }
-        esp_lcd_panel_io_tx_param(io, ili9488_init[cmd].cmd, fill_buf,
-            param_len * 2);
-    } else {
-        esp_lcd_panel_io_tx_param(
-            io, ili9488_init[cmd].cmd, ili9488_init[cmd].data,
-            ili9488_init[cmd].data_bytes & ILI9488_INIT_LENGTH_MASK);
-    }
+        else if (ili9488->cmd_param_bits == 16)
+        {
+            uint16_t fill_buf[20];
+            int param_len = ili9488_init[cmd].data_bytes & ILI9488_INIT_LENGTH_MASK;
+
+            assert(param_len <= sizeof(fill_buf) / sizeof(fill_buf[0]) &&
+                "command fill buf smaller than command data");
+
+            for (int i = 0; i < param_len; i++)
+            {
+                fill_buf[i] = ili9488_init[cmd].data[i];
+            }
+            esp_lcd_panel_io_tx_param(io, ili9488_init[cmd].cmd, fill_buf,
+                param_len * 2);
+        }
+        else
+        {
+            esp_lcd_panel_io_tx_param(
+                io, ili9488_init[cmd].cmd, ili9488_init[cmd].data,
+                ili9488_init[cmd].data_bytes & ILI9488_INIT_LENGTH_MASK);
+        }
         cmd++;
     }
 
@@ -184,13 +204,52 @@ static esp_err_t panel_ili9488_init(esp_lcd_panel_t *panel)
     return ESP_OK;
 }
 
-#define SEND_COORDS(start, end, io, cmd)                \
-    esp_lcd_panel_io_tx_param(io, cmd, (uint8_t[]) {    \
-        (start >> 8) & 0xFF,                            \
-        start & 0xFF,                                   \
-        ((end - 1) >> 8) & 0xFF,                        \
-        (end - 1) & 0xFF,                               \
-    }, 4)
+static inline void send_coords(esp_lcd_panel_io_handle_t *io, int lcd_cmd, start, end)
+{
+    if (ili9488->cmd_param_bits == 32)
+    {
+        esp_lcd_panel_io_tx_param(io, cmd, (uint8_t[]) {
+            (start >> 8) & 0xFF,
+            0,
+            0,
+            0,
+            start & 0xFF,
+            0,
+            0,
+            0,
+            ((end - 1) >> 8) & 0xFF,
+            0,
+            0,
+            0,
+            (end - 1) & 0xFF,
+            0,
+            0,
+            0,
+        }, 16)
+    }
+    else if (ili9488->cmd_param_bits == 16)
+    {
+        esp_lcd_panel_io_tx_param(io, cmd, (uint8_t[]) {
+            (start >> 8) & 0xFF,
+            0,
+            start & 0xFF,
+            0,
+            ((end - 1) >> 8) & 0xFF,
+            0,
+            (end - 1) & 0xFF,
+            0,
+        }, 8)
+    }
+    else
+    {
+        esp_lcd_panel_io_tx_param(io, lcd_cmd, (uint8_t[]) {
+            (start >> 8) & 0xFF,
+            start & 0xFF,
+            ((end - 1) >> 8) & 0xFF,
+            (end - 1) & 0xFF,
+        }, 4);
+    }
+}
 
 static esp_err_t panel_ili9488_draw_bitmap(
     esp_lcd_panel_t *panel, int x_start, int y_start, int x_end, int y_end,
@@ -208,8 +267,8 @@ static esp_err_t panel_ili9488_draw_bitmap(
 
     size_t color_data_len = (x_end - x_start) * (y_end - y_start);
 
-    SEND_COORDS(x_start, x_end, io, LCD_CMD_CASET);
-    SEND_COORDS(y_start, y_end, io, LCD_CMD_RASET);
+    send_coords(io, LCD_CMD_CASET, x_start, x_end);
+    send_coords(io, LCD_CMD_RASET, y_start, y_end);
 
     if (ili9488->color_mode == ILI9488_COLOR_MODE_18BIT)
     {
@@ -265,9 +324,20 @@ static esp_err_t panel_ili9488_mirror(
     {
         ili9488->memory_access_control &= ~LCD_CMD_MY_BIT;
     }
-    uint16_t memory_access_control = ili9488->memory_access_control;
-    //esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, &ili9488->memory_access_control, 1);
-    esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, &memory_access_control, 2);
+    if (ili9488->cmd_param_bits == 32)
+    {
+        uint32_t memory_access_control = ili9488->memory_access_control;
+        esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, &memory_access_control, 4);
+    }
+    else if (ili9488->cmd_param_bits == 16)
+    {
+        uint16_t memory_access_control = ili9488->memory_access_control;
+        esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, &memory_access_control, 2);
+    }
+    else
+    {
+        esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, &ili9488->memory_access_control, 1);
+    }
     return ESP_OK;
 }
 
@@ -283,9 +353,20 @@ static esp_err_t panel_ili9488_swap_xy(esp_lcd_panel_t *panel, bool swap_axes)
     {
         ili9488->memory_access_control &= ~LCD_CMD_MV_BIT;
     }
-    //esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, &ili9488->memory_access_control, 1);
-    uint16_t memory_access_control = ili9488->memory_access_control;
-    esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, &memory_access_control, 2);
+    if (ili9488->cmd_param_bits == 32)
+    {
+        uint32_t memory_access_control = ili9488->memory_access_control;
+        esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, &memory_access_control, 4);
+    }
+    else if (ili9488->cmd_param_bits == 16)
+    {
+        uint16_t memory_access_control = ili9488->memory_access_control;
+        esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, &memory_access_control, 2);
+    }
+    else
+    {
+        esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, &ili9488->memory_access_control, 1);
+    }
     return ESP_OK;
 }
 
@@ -327,6 +408,7 @@ static esp_err_t panel_ili9488_disp_on_off(esp_lcd_panel_t *panel, bool on_off)
 esp_err_t esp_lcd_new_panel_ili9488(
     const esp_lcd_panel_io_handle_t io,
     const esp_lcd_panel_dev_config_t *panel_dev_config,
+    int cmd_param_bits,
     esp_lcd_panel_handle_t *ret_panel)
 {
     esp_err_t ret = ESP_OK;
@@ -335,6 +417,7 @@ esp_err_t esp_lcd_new_panel_ili9488(
                       err, TAG, "invalid argument");
     ili9488 = (ili9488_panel_t *)(calloc(1, sizeof(ili9488_panel_t)));
     ESP_GOTO_ON_FALSE(ili9488, ESP_ERR_NO_MEM, err, TAG, "no mem for ili9488 panel");
+    ili9488->cmd_param_bits = cmd_param_bits;
 
     if (panel_dev_config->reset_gpio_num >= 0)
     {
