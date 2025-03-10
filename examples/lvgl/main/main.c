@@ -68,7 +68,7 @@ static bool notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io,
     return false;
 }
 
-static void lvgl_flush_cb(lv_display_t *display, const lv_area_t *area, uint8_t *px_map) {
+static void lvgl_flush_cb(lv_display_t *display, const lv_area_t *area, uint8_t *px_map)
 {
     esp_lcd_panel_handle_t panel_handle = lv_display_get_user_data(display);
 
@@ -81,7 +81,7 @@ static void lvgl_flush_cb(lv_display_t *display, const lv_area_t *area, uint8_t 
 
 static void IRAM_ATTR lvgl_tick_cb(void *param)
 {
-	lv_tick_inc(LVGL_UPDATE_PERIOD_MS);
+	  lv_tick_inc(LVGL_UPDATE_PERIOD_MS);
 }
 
 static void display_brightness_init(void)
@@ -226,17 +226,17 @@ void initialize_lvgl_pre_driver()
 
 void initialize_lvgl_post_driver()
 {
-    ESP_LOGI(TAG, "Allocating %zu bytes for LVGL buffer", LV_BUFFER_SIZE * BYTE_PER_PIXEL);
-    lv_buf_1 = (lv_color_t *)heap_caps_malloc(LV_BUFFER_SIZE * BYTE_PER_PIXEL, MALLOC_CAP_DMA);
+    ESP_LOGI(TAG, "Allocating %zu bytes for LVGL buffer", LV_BUFFER_SIZE * BYTES_PER_PIXEL);
+    lv_buf_1 = (lv_color_t *)heap_caps_malloc(LV_BUFFER_SIZE * BYTES_PER_PIXEL, MALLOC_CAP_DMA);
 #if USE_DOUBLE_BUFFERING
-    ESP_LOGI(TAG, "Allocating %zu bytes for second LVGL buffer", LV_BUFFER_SIZE * BYTE_PER_PIXEL);
-    lv_buf_2 = (lv_color_t *)heap_caps_malloc(LV_BUFFER_SIZE * BYTE_PER_PIXEL, MALLOC_CAP_DMA);
+    ESP_LOGI(TAG, "Allocating %zu bytes for second LVGL buffer", LV_BUFFER_SIZE * BYTES_PER_PIXEL);
+    lv_buf_2 = (lv_color_t *)heap_caps_malloc(LV_BUFFER_SIZE * BYTES_PER_PIXEL, MALLOC_CAP_DMA);
 #endif
     ESP_LOGI(TAG, "Initializing %dx%d display", DISPLAY_HORIZONTAL_PIXELS, DISPLAY_VERTICAL_PIXELS);
     lv_display_set_flush_cb(lv_disp_drv, lvgl_flush_cb);
 
     ESP_LOGI(TAG, "Creating LVLG display buffer");
-    lv_display_set_buffers(lv_disp_drv, lv_buf_1, lv_buf_2, LV_BUFFER_SIZE * BYTE_PER_PIXEL, LV_DISPLAY_RENDER_MODE_PARTIAL);
+    lv_display_set_buffers(lv_disp_drv, lv_buf_1, lv_buf_2, LV_BUFFER_SIZE * BYTES_PER_PIXEL, LV_DISPLAY_RENDER_MODE_PARTIAL);
 
     lv_display_set_user_data(lv_disp_drv, lcd_handle);
 
@@ -276,7 +276,7 @@ void create_demo_ui()
 
     // Add a blue arc to the start
     section = lv_scale_add_section(scale);
-    lv_scale_section_set_range(scale, 0, 20);
+    lv_scale_section_set_range(section, 0, 20);
 
     // Add a needle line indicator
     needle_line = lv_line_create(scale);

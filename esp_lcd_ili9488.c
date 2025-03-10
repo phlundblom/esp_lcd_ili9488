@@ -204,11 +204,11 @@ static esp_err_t panel_ili9488_init(esp_lcd_panel_t *panel)
     return ESP_OK;
 }
 
-static inline void send_coords(esp_lcd_panel_io_handle_t *io, int lcd_cmd, start, end)
+static inline void send_coords(ili9488_panel_t *ili9488, esp_lcd_panel_io_handle_t io, int lcd_cmd, int start, int end)
 {
     if (ili9488->cmd_param_bits == 32)
     {
-        esp_lcd_panel_io_tx_param(io, cmd, (uint8_t[]) {
+        esp_lcd_panel_io_tx_param(io, lcd_cmd, (uint8_t[]) {
             (start >> 8) & 0xFF,
             0,
             0,
@@ -225,11 +225,11 @@ static inline void send_coords(esp_lcd_panel_io_handle_t *io, int lcd_cmd, start
             0,
             0,
             0,
-        }, 16)
+        }, 16);
     }
     else if (ili9488->cmd_param_bits == 16)
     {
-        esp_lcd_panel_io_tx_param(io, cmd, (uint8_t[]) {
+        esp_lcd_panel_io_tx_param(io, lcd_cmd, (uint8_t[]) {
             (start >> 8) & 0xFF,
             0,
             start & 0xFF,
@@ -238,7 +238,7 @@ static inline void send_coords(esp_lcd_panel_io_handle_t *io, int lcd_cmd, start
             0,
             (end - 1) & 0xFF,
             0,
-        }, 8)
+        }, 8);
     }
     else
     {
@@ -267,8 +267,8 @@ static esp_err_t panel_ili9488_draw_bitmap(
 
     size_t color_data_len = (x_end - x_start) * (y_end - y_start);
 
-    send_coords(io, LCD_CMD_CASET, x_start, x_end);
-    send_coords(io, LCD_CMD_RASET, y_start, y_end);
+    send_coords(ili9488, io, LCD_CMD_CASET, x_start, x_end);
+    send_coords(ili9488, io, LCD_CMD_RASET, y_start, y_end);
 
     if (ili9488->color_mode == ILI9488_COLOR_MODE_18BIT)
     {
